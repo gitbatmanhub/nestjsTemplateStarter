@@ -6,8 +6,8 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_NAME: ${DB_NAMEDB}
-      POSTGRES_USERNAME: ${DB_USERNAME}
-    container_name: shopTest
+      POSTGRES_DB: ${DB_NAMEDB}
+      POSTGRES_USER: ${DB_USERNAME}
+    container_name: TestDB
     volumes:
       - ./postgres:/var/lib/postgresql/data
