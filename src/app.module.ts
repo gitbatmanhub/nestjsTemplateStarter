@@ -1,51 +1,51 @@
-import * as process from 'node:process';
+import { join } from 'node:path';
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ProductsModule } from './products/products.module';
-import { CommonModule } from './common/common.module';
-import { SeedModule } from './seed/seed.module';
-import { FilesModule } from './files/files.module';
-import { AuthModule } from './auth/auth.module';
-import { MessagesWsModule } from './messages-ws/messages-ws.module';
-import { GraphQLModule } from '@nestjs/graphql';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default';
-import { join } from 'path';
+import { GraphQLModule } from '@nestjs/graphql';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { HealthModule } from './health/health.module';
+import { AuthModule } from './auth/auth.module';
+import { ArticlesModule } from './articles/articles.module';
+import { UploadsModule } from './uploads/uploads.module';
+import { RealtimeModule } from './realtime/realtime.module';
+import { validateEnv } from './config/env.validation';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
-    TypeOrmModule.forRoot({
-      ssl: process.env.STAGE === 'prod',
-      extra:
-        process.env.STAGE === 'prod'
-          ? { ssl: { rejectUnauthorized: false } }
-          : undefined,
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: +process.env.DB_PORT,
-      database: process.env.DB_NAMEDB,
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      autoLoadEntities: true,
-      synchronize: true,
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnv,
+    }),
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.getOrThrow<string>('DB_HOST'),
+        port: configService.getOrThrow<number>('DB_PORT'),
+        username: configService.getOrThrow<string>('DB_USERNAME'),
+        password: configService.getOrThrow<string>('DB_PASSWORD'),
+        database: configService.getOrThrow<string>('DB_NAME'),
+        autoLoadEntities: true,
+        synchronize: configService.getOrThrow<boolean>('DB_SYNC'),
+        ssl: configService.get<boolean>('DB_SSL')
+          ? { rejectUnauthorized: false }
+          : false,
+      }),
     }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
+      sortSchema: true,
       playground: false,
-      plugins: [ApolloServerPluginLandingPageLocalDefault()],
+      introspection: true,
+      context: ({ req, res }) => ({ req, res }),
     }),
-    ProductsModule,
-    CommonModule,
-    SeedModule,
-    FilesModule,
-    /*ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'static'),
-    }),*/
+    HealthModule,
     AuthModule,
-    MessagesWsModule,
+    ArticlesModule,
+    UploadsModule,
+    RealtimeModule,
   ],
 })
 export class AppModule {}
