@@ -37,7 +37,7 @@ import { validateEnv } from './config/env.validation';
       driver: ApolloDriver,
       autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
       sortSchema: true,
-      playground: false,
+      playground: true,
       introspection: true,
       context: ({ req, res }) => ({ req, res }),
     }),
