@@ -2,83 +2,63 @@ import {
   BeforeInsert,
   BeforeUpdate,
   Column,
+  CreateDateColumn,
   Entity,
-  OneToMany,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
-import { Product } from '../../products/entities';
+import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { ApiProperty } from '@nestjs/swagger';
-import { ObjectType } from '@nestjs/graphql';
 import { Exclude } from 'class-transformer';
+import { UserRole } from '../enums/user-role.enum';
 
 @Entity({ name: 'users' })
 @ObjectType()
 export class User {
-  @ApiProperty({
-    example: '7f2c70ed-121c-4cd6-ba38-8dc8ad0466c6',
-    uniqueItems: true,
-    description: 'Id of User',
-  })
+  @ApiProperty()
+  @Field(() => ID)
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ApiProperty({
-    example: 'email@example.com',
-    uniqueItems: true,
-    description: 'Email of User',
-  })
+  @ApiProperty()
+  @Field()
   @Column('text', { unique: true })
   email: string;
 
-  @ApiProperty({
-    example: 'ThisI5Str0ngPasswordExamp13',
-    uniqueItems: false,
-    description: 'Password of User',
-  })
   @Exclude()
   @Column('text', { select: false })
   password: string;
 
-  @ApiProperty({
-    example: 'Name Complete',
-    uniqueItems: false,
-    description: 'Name Complete of User',
-  })
+  @ApiProperty()
+  @Field()
   @Column('text')
   fullName: string;
 
-  @ApiProperty({
-    example: true,
-    uniqueItems: false,
-    description: 'Status of User',
-    default: true,
-  })
+  @ApiProperty()
+  @Field()
   @Column('bool', { default: true })
   isActive: boolean;
 
-  @ApiProperty({
-    example: ['user'],
-    uniqueItems: false,
-    description: 'Role of User',
-    default: ['user'],
-  })
-  @Column('text', { array: true, default: ['user'] })
-  role: string[];
+  @ApiProperty({ enum: UserRole, isArray: true })
+  @Field(() => [UserRole])
+  @Column('text', { array: true, default: [UserRole.USER] })
+  roles: UserRole[];
 
-  @OneToMany(() => Product, (product) => product.user)
-  product: Product;
+  @Exclude()
+  @Column('text', { nullable: true, select: false })
+  currentHashedRefreshToken?: string | null;
 
-  constructor(partial: Partial<User>) {
-    Object.assign(this, partial);
-  }
+  @Field()
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @Field()
+  @UpdateDateColumn()
+  updatedAt: Date;
 
   @BeforeInsert()
-  checkEmailInsert() {
-    this.email = this.email.toLowerCase().trim();
-  }
-
   @BeforeUpdate()
-  checkEmailUpdate() {
-    this.checkEmailInsert();
+  normalizeEmail() {
+    this.email = this.email.toLowerCase().trim();
   }
 }

@@ -1,35 +1,49 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { PassportModule } from '@nestjs/passport';
-import { AuthService } from './auth.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthController } from './auth.controller';
-import { User } from './entities/user.entity';
 import { JwtModule } from '@nestjs/jwt';
-import { JwtStrategy } from './strategies/jwt.strategy';
+import { PassportModule } from '@nestjs/passport';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthController } from './auth.controller';
 import { AuthResolver } from './auth.resolver';
+import { AuthService } from './auth.service';
+import { User } from './entities/user.entity';
+import { AccessTokenStrategy } from './strategies/access-token.strategy';
+import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
+import { AccessTokenGuard } from './guards/access-token.guard';
+import { RefreshTokenGuard } from './guards/refresh-token.guard';
+import { RolesGuard } from './guards/roles.guard';
 
 @Module({
-  controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, AuthResolver],
   imports: [
     ConfigModule,
     TypeOrmModule.forFeature([User]),
-    ConfigModule.forRoot(),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        return {
-          secret: configService.get('JWT_SECRET'),
-          signOptions: {
-            expiresIn: '2h',
-          },
-        };
-      },
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.getOrThrow<string>('JWT_SECRET'),
+      }),
     }),
   ],
-  exports: [TypeOrmModule, JwtStrategy, PassportModule, JwtModule],
+  controllers: [AuthController],
+  providers: [
+    AuthService,
+    AuthResolver,
+    AccessTokenStrategy,
+    RefreshTokenStrategy,
+    AccessTokenGuard,
+    RefreshTokenGuard,
+    RolesGuard,
+  ],
+  exports: [
+    AuthService,
+    PassportModule,
+    JwtModule,
+    AccessTokenGuard,
+    RefreshTokenGuard,
+    RolesGuard,
+    TypeOrmModule,
+  ],
 })
 export class AuthModule {}

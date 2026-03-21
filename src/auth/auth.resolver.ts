@@ -1,34 +1,50 @@
+import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CreateUserDto, LoginUserDto, ResponseAuthDto } from './dto';
 import { AuthService } from './auth.service';
-import { ClassSerializerInterceptor, UseInterceptors } from '@nestjs/common';
-import { User } from './entities/user.entity';
-import { GetUserGraphQL } from './decorators/get-user.decorator';
-import { Auth } from './decorators';
+import { AuthResponseDto } from './dto/auth-response.dto';
+import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
+import { AccessTokenGuard } from './guards/access-token.guard';
+import { RefreshTokenGuard } from './guards/refresh-token.guard';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { JwtUser } from './interfaces/jwt-user.interface';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { CurrentRefreshToken } from './decorators/current-refresh-token.decorator';
+import { LogoutResponseDto } from './dto/logout-response.dto';
 
 @Resolver()
-@UseInterceptors(ClassSerializerInterceptor)
 export class AuthResolver {
   constructor(private readonly authService: AuthService) {}
 
-  @Mutation(() => ResponseAuthDto)
-  async login(@Args('loginUserDto') loginUserDto: LoginUserDto) {
-    return await this.authService.loginUser(loginUserDto);
+  @Mutation(() => AuthResponseDto)
+  register(@Args('input') registerDto: RegisterDto) {
+    return this.authService.register(registerDto);
   }
 
-  @Mutation(() => ResponseAuthDto)
-  async register(@Args('registerUserDto') createUserDto: CreateUserDto) {
-    return await this.authService.createUser(createUserDto);
+  @Mutation(() => AuthResponseDto)
+  login(@Args('input') loginDto: LoginDto) {
+    return this.authService.login(loginDto);
   }
 
-  @Query(() => ResponseAuthDto)
-  @Auth()
-  async checkAthStatus(@GetUserGraphQL() user: User) {
-    return this.authService.checkAuthStatus(user);
+  @Mutation(() => AuthResponseDto)
+  @UseGuards(RefreshTokenGuard)
+  refreshTokens(
+    @Args('input') _refreshTokenDto: RefreshTokenDto,
+    @CurrentUser() user: JwtUser,
+    @CurrentRefreshToken() refreshToken: string,
+  ) {
+    return this.authService.refreshTokens(user.id, refreshToken);
   }
 
-  @Query(() => String)
-  sayHello(): string {
-    return 'Hello GraphQL';
+  @Query(() => AuthResponseDto)
+  @UseGuards(AccessTokenGuard)
+  me(@CurrentUser() user: JwtUser) {
+    return this.authService.me(user.id);
+  }
+
+  @Mutation(() => LogoutResponseDto)
+  @UseGuards(AccessTokenGuard)
+  logout(@CurrentUser() user: JwtUser) {
+    return this.authService.logout(user.id);
   }
 }
