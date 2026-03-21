@@ -1,13 +1,13 @@
 services:
-  db:
+  postgres:
     image: postgres:17.4
-    restart: always
+    container_name: nestjs-starter-db
+    restart: unless-stopped
     ports:
-      - "5432:5432"
+      - '5432:5432'
     environment:
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAMEDB}
+      POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USERNAME}
-    container_name: TestDB
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - ./postgres:/var/lib/postgresql/data
